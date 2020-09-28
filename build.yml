@@ -144,16 +144,16 @@ objects:
       - name: upgrade-from-repo
         image: lachlanevenson/k8s-helm:$(inputs.params.helmVersion)
         script: |
-          echo current installed helm releases
-          helm list --namespace "$(inputs.params.releaseNamespace)"
-          echo parsing helms repo name...
-          REPO=`echo "$(inputs.params.chartName)" | cut -d "/" -f 1`
-          echo adding helm repo...
-          helm repo add $REPO "$(inputs.params.helmRepo)" --username "$(inputs.params.username)" --password "$(inputs.params.password)"
-          echo adding updating repo...
-          helm repo update
-          echo installing helm chart...
-          helm upgrade --wait --install --namespace "$(inputs.params.releaseNamespace)" $(inputs.params.releaseName) $(inputs.params.chartName) --debug --set "$(inputs.params.overwriteValues)"```
+          echo "setting HELM_EXPERIMENTAL_OCI=1"
+          export HELM_EXPERIMENTAL_OCI=1
+          echo "logging in to helm repo"
+          helm registry login "$(inputs.params.helmRepo)" --username "$(inputs.params.username)" --password "$(inputs.params.password)"
+          echo "pulling chart to local repo"
+          helm chart pull "$(inputs.params.helmRepo)"/"$(inputs.params.chartName)":v1
+          echo "exporting helm chart"
+          helm chart export "$(inputs.params.helmRepo)"/"$(inputs.params.chartName)":v1 --destination .
+          echo "installing helm chart"
+          helm install ./"$(inputs.params.chartName)" --generate-name --namespace "$(inputs.params.releaseNamespace)"
 - apiVersion: tekton.dev/v1beta1
   kind: Task
   metadata:
@@ -223,7 +223,7 @@ objects:
       - name: password
         value: WUeQdKnivwFcGr8d3QqDrxevjvIX7IV+
       - name: chartName
-        value: helm/ocp-openjdk
+        value: ocp-openjdk
       - name: releaseVersion
         value: "v1"
       - name: releaseName
@@ -271,7 +271,7 @@ objects:
       - name: password
         value: WUeQdKnivwFcGr8d3QqDrxevjvIX7IV+
       - name: chartName
-        value: helm/ocp-openjdk
+        value: ocp-openjdk
       - name: releaseVersion
         value: "v1"
       - name: releaseName
