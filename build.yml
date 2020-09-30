@@ -32,14 +32,14 @@ objects:
   metadata:
     labels:
       application: ${APPLICATION_NAME}-cicd
-    name: ${APPLICATION_NAME}-dev
+    name: ${APPLICATION_NAME}-cicd-dev
     namespace: ${NAMESPACE}
 - apiVersion: image.openshift.io/v1
   kind: ImageStream
   metadata:
     labels:
       application: ${APPLICATION_NAME}-cicd
-    name: ${APPLICATION_NAME}-pre-ivt
+    name: ${APPLICATION_NAME}-cicd-pre-ivt
     namespace: ${NAMESPACE}
 - apiVersion: tekton.dev/v1alpha1
   kind: PipelineResource
@@ -116,6 +116,10 @@ objects:
     annotations:
       tekton.dev/tags: helm
   spec:
+    resources:
+      inputs:
+      - name: source
+        type: git
     params:
       - name: helmRepo
         description: "Specify a specific helm repo"
@@ -140,9 +144,13 @@ objects:
       - name: helmVersion
         description: "Specify a specific helm version"
         default: "latest"
+      - name: env
+        description: "Specify what env to use for values"
+        default: "dev"
     steps:
       - name: upgrade-from-repo
         image: lachlanevenson/k8s-helm:$(inputs.params.helmVersion)
+        workingDir: /workspace/source
         script: |
           echo "setting HELM_EXPERIMENTAL_OCI=1"
           export HELM_EXPERIMENTAL_OCI=1
@@ -153,7 +161,7 @@ objects:
           echo "exporting helm chart"
           helm chart export "$(inputs.params.helmRepo)"/"$(inputs.params.chartName)":v1 --destination .
           echo "installing helm chart"
-          helm install ./"$(inputs.params.chartName)" --generate-name --namespace "$(inputs.params.releaseNamespace)"
+          helm upgrade --install ocp-openjdk ./"$(inputs.params.chartName)" -f ./ocp/"$(inputs.params.env)".yaml --namespace "$(inputs.params.releaseNamespace)" --set "$(inputs.params.overwriteValues)"
 - apiVersion: tekton.dev/v1beta1
   kind: Task
   metadata:
@@ -167,8 +175,10 @@ objects:
         description: The namespace we are tagging to  
       - name: tag
         description: The image tag
-      - name: imageStream
-        description: The imageStream
+      - name: fromImageStream
+        description: The imageStream we are tagging from
+      - name: toImageStream
+        description: The imageStream we are tagging to
       - name: deploymentResource
         description: the deployment resource, e.g deployment or deploymentconfig
       - name: deployment
@@ -179,8 +189,8 @@ objects:
         command: ["/usr/local/bin/oc"]
         args:
           - tag
-          - "$(params.fromNamespace)/$(params.imageStream):$(params.tag)"
-          - "$(params.toNamespace)/$(params.imageStream):$(params.tag)"
+          - "$(params.fromNamespace)/$(params.fromImageStream):$(params.tag)"
+          - "$(params.toNamespace)/$(params.toImageStream):$(params.tag)"
       - name: verify-deployment
         image: quay.io/openshift-pipeline/openshift-cli:latest
         command: ["oc"]
@@ -205,7 +215,7 @@ objects:
         name: maven-build-binary-build
       params:
       - name: buildConfig
-        value: ${APPLICATION_NAME}-dev
+        value: ${APPLICATION_NAME}-cicd-dev
       resources:
         inputs:
         - name: source
@@ -231,9 +241,15 @@ objects:
       - name: releaseNamespace
         value: ${APPLICATION_NAME}-dev
       - name: overwriteValues
-        value: ""
+        value: nameOverride=${APPLICATION_NAME}-dev,fullnameOverride=${APPLICATION_NAME}-dev
       - name: helmVersion
         value: "latest"
+      - name: env
+        value: dev
+      resources:
+        inputs:
+        - name: source
+          resource: ${APPLICATION_NAME}-git    
     - name: deploy-to-dev
       taskRef:
         name: deploy
@@ -246,12 +262,14 @@ objects:
         value: ${APPLICATION_NAME}-dev  
       - name: tag
         value: devnew 
-      - name: imageStream
-        value: ${APPLICATION_NAME}
+      - name: fromImageStream
+        value: ${APPLICATION_NAME}-cicd-dev
+      - name: toImageStream
+        value: ${APPLICATION_NAME}-dev
       - name: deploymentResource
         value: deploymentconfig
       - name: deployment
-        value: ${APPLICATION_NAME}
+        value: ${APPLICATION_NAME}-dev
 - apiVersion: tekton.dev/v1beta1
   kind: Pipeline
   metadata:
@@ -259,6 +277,8 @@ objects:
     namespace: ${NAMESPACE}
   spec:
     resources:
+    - name: ${APPLICATION_NAME}-git
+      type: git
     tasks: 
     - name: helm-upgrade
       taskRef:
@@ -279,9 +299,15 @@ objects:
       - name: releaseNamespace
         value: ${APPLICATION_NAME}-qa
       - name: overwriteValues
-        value: ""
+        value: nameOverride=${APPLICATION_NAME}-qa,fullnameOverride=${APPLICATION_NAME}-qa
       - name: helmVersion
-        value: "latest"            
+        value: "latest"
+      - name: env
+        value: qa
+      resources:
+        inputs:
+        - name: source
+          resource: ${APPLICATION_NAME}-git                
     - name: deploy-to-qa
       taskRef:
         name: deploy
@@ -294,24 +320,26 @@ objects:
         value: ${APPLICATION_NAME}-qa  
       - name: tag
         value: devnew 
-      - name: imageStream
-        value: ${APPLICATION_NAME}
+      - name: fromImageStream
+        value: ${APPLICATION_NAME}-dev
+      - name: toImageStream
+        value: ${APPLICATION_NAME}-qa
       - name: deploymentResource
         value: deploymentconfig
       - name: deployment
-        value: ${APPLICATION_NAME}                                      
+        value: ${APPLICATION_NAME}-qa                                      
 - apiVersion: build.openshift.io/v1
   kind: BuildConfig
   metadata:
     labels:
       application: ${APPLICATION_NAME}
-    name: ${APPLICATION_NAME}-dev
+    name: ${APPLICATION_NAME}-cicd-dev
     namespace: "${NAMESPACE}"
   spec:
     output:
       to:
         kind: ImageStreamTag
-        name: ${APPLICATION_NAME}-dev:devnew
+        name: ${APPLICATION_NAME}-cicd-dev:devnew
     source:
       binary: {}
       type: Binary
@@ -327,13 +355,13 @@ objects:
   metadata:
     labels:
       application: ${APPLICATION_NAME}
-    name: ${APPLICATION_NAME}-pre-ivt
+    name: ${APPLICATION_NAME}-cicd-pre-ivt
     namespace: "${NAMESPACE}"
   spec:
     output:
       to:
         kind: ImageStreamTag
-        name: ${APPLICATION_NAME}-pre-ivt:ivtnew
+        name: ${APPLICATION_NAME}-cicd-pre-ivt:ivtnew
     source:
       binary: {}
       type: Binary
