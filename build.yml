@@ -63,6 +63,18 @@ objects:
       value: ${APPLICATION_SOURCE_REPO}
     - name: revision
       value: ${APPLICATION_SOURCE_REF}
+- apiVersion: tekton.dev/v1alpha1
+  kind: PipelineResource
+  metadata:
+    name: ${APPLICATION_NAME}-git-pre-ivt
+    namespace: ${NAMESPACE}
+  spec:
+    type: git
+    params:
+    - name: url
+      value: ${APPLICATION_SOURCE_REPO}
+    - name: revision
+      value: jan-release
 - apiVersion: tekton.dev/v1beta1
   kind: Task
   metadata:
@@ -327,7 +339,138 @@ objects:
       - name: deploymentResource
         value: deploymentconfig
       - name: deployment
-        value: ${APPLICATION_NAME}-qa                                      
+        value: ${APPLICATION_NAME}-qa 
+- apiVersion: tekton.dev/v1beta1
+  kind: Pipeline
+  metadata:
+    name: ${APPLICATION_NAME}-deploy-pre-ivt
+    namespace: ${NAMESPACE}
+  spec:
+    resources:
+    - name: ${APPLICATION_NAME}-git-pre-ivt
+      type: git
+    params:
+    - name: git-revision
+      type: string
+    tasks:
+    - name: maven-build-binary-build
+      taskRef: 
+        name: maven-build-binary-build
+      params:
+      - name: buildConfig
+        value: ${APPLICATION_NAME}-cicd-pre-ivt
+      resources:
+        inputs:
+        - name: source
+          resource: ${APPLICATION_NAME}-git-pre-ivt                 
+    - name: helm-upgrade
+      taskRef:
+        name: helm-upgrade-from-repo
+      runAfter:
+        - maven-build-binary-build
+      params:
+      - name: helmRepo
+        value: mhill.azurecr.io/helm
+      - name: username
+        value: mhill
+      - name: password
+        value: WUeQdKnivwFcGr8d3QqDrxevjvIX7IV+
+      - name: chartName
+        value: ocp-openjdk
+      - name: releaseVersion
+        value: "v1"
+      - name: releaseName
+        value: "v1"
+      - name: releaseNamespace
+        value: ${APPLICATION_NAME}-pre-ivt
+      - name: overwriteValues
+        value: nameOverride=${APPLICATION_NAME}-pre-ivt,fullnameOverride=${APPLICATION_NAME}-pre-ivt
+      - name: helmVersion
+        value: "latest"
+      - name: env
+        value: pre-ivt
+      resources:
+        inputs:
+        - name: source
+          resource: ${APPLICATION_NAME}-git-pre-ivt    
+    - name: deploy-to-dev
+      taskRef:
+        name: deploy
+      runAfter:
+        - helm-upgrade
+      params:
+      - name: fromNamespace
+        value: ${APPLICATION_NAME}-cicd
+      - name: toNamespace
+        value: ${APPLICATION_NAME}-pre-ivt  
+      - name: tag
+        value: ivtnew 
+      - name: fromImageStream
+        value: ${APPLICATION_NAME}-cicd-pre-ivt
+      - name: toImageStream
+        value: ${APPLICATION_NAME}-pre-ivt
+      - name: deploymentResource
+        value: deploymentconfig
+      - name: deployment
+        value: ${APPLICATION_NAME}-pre-ivt                          
+- apiVersion: tekton.dev/v1beta1
+  kind: Pipeline
+  metadata:
+    name: ${APPLICATION_NAME}-deploy-ivt
+    namespace: ${NAMESPACE}
+  spec:
+    resources:
+    - name: ${APPLICATION_NAME}-git-pre-ivt
+      type: git
+    tasks: 
+    - name: helm-upgrade
+      taskRef:
+        name: helm-upgrade-from-repo
+      params:
+      - name: helmRepo
+        value: mhill.azurecr.io/helm
+      - name: username
+        value: mhill
+      - name: password
+        value: WUeQdKnivwFcGr8d3QqDrxevjvIX7IV+
+      - name: chartName
+        value: ocp-openjdk
+      - name: releaseVersion
+        value: "v1"
+      - name: releaseName
+        value: ${APPLICATION_NAME}
+      - name: releaseNamespace
+        value: ${APPLICATION_NAME}-ivt
+      - name: overwriteValues
+        value: nameOverride=${APPLICATION_NAME}-ivt,fullnameOverride=${APPLICATION_NAME}-ivt
+      - name: helmVersion
+        value: "latest"
+      - name: env
+        value: ivt
+      resources:
+        inputs:
+        - name: source
+          resource: ${APPLICATION_NAME}-git-pre-ivt                
+    - name: deploy-to-ivt
+      taskRef:
+        name: deploy
+      runAfter:
+        - helm-upgrade
+      params:
+      - name: fromNamespace
+        value: ${APPLICATION_NAME}-pre-ivt
+      - name: toNamespace
+        value: ${APPLICATION_NAME}-ivt  
+      - name: tag
+        value: ivtnew 
+      - name: fromImageStream
+        value: ${APPLICATION_NAME}-pre-ivt
+      - name: toImageStream
+        value: ${APPLICATION_NAME}-ivt
+      - name: deploymentResource
+        value: deploymentconfig
+      - name: deployment
+        value: ${APPLICATION_NAME}-ivt 
 - apiVersion: build.openshift.io/v1
   kind: BuildConfig
   metadata:
