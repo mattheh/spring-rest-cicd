@@ -1,0 +1,58 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"tekton.dev/v1beta1","kind":"Task","metadata":{"annotations":{},"labels":{"template":"generic-java-jenkins-pipeline"},"name":"maven-build-binary-build","namespace":"basic-spring-boot-cicd"},"spec":{"params":[{"description":"the name of the build config","name":"buildConfig"}],"resources":{"inputs":[{"name":"source","type":"git"}]},"steps":[{"args":["package"],"command":["/usr/bin/mvn"],"image":"maven:3.6.0-jdk-8-slim","name":"package","workingDir":"/workspace/source"},{"args":["-p","/workspace/source/upload"],"command":["mkdir"],"image":"quay.io/openshift-pipeline/openshift-cli:latest","name":"make-upload-dir"},{"args":["/workspace/source/target/shift-rest-1.0.0-SNAPSHOT.jar","/workspace/source/upload"],"command":["cp"],"image":"quay.io/openshift-pipeline/openshift-cli:latest","name":"copy-assets"},{"args":["start-build","-w","-F","$(params.buildConfig)","--from-dir","."],"command":["/usr/local/bin/oc"],"image":"quay.io/openshift-pipeline/openshift-cli:latest","name":"oc-binary-build","workingDir":"/workspace/source/upload"}]}}
+  generation: 1
+  labels:
+    template: generic-java-jenkins-pipeline
+  name: maven-build-binary-build
+  selfLink: /apis/tekton.dev/v1beta1/namespaces/basic-spring-boot-cicd/tasks/maven-build-binary-build
+spec:
+  params:
+  - description: the name of the build config
+    name: buildConfig
+    type: string
+  resources:
+    inputs:
+    - name: source
+      type: git
+  steps:
+  - args:
+    - package
+    command:
+    - /usr/bin/mvn
+    image: maven:3.6.0-jdk-8-slim
+    name: package
+    resources: {}
+    workingDir: /workspace/source
+  - args:
+    - -p
+    - /workspace/source/upload
+    command:
+    - mkdir
+    image: quay.io/openshift-pipeline/openshift-cli:latest
+    name: make-upload-dir
+    resources: {}
+  - args:
+    - /workspace/source/target/shift-rest-1.0.0-SNAPSHOT.jar
+    - /workspace/source/upload
+    command:
+    - cp
+    image: quay.io/openshift-pipeline/openshift-cli:latest
+    name: copy-assets
+    resources: {}
+  - args:
+    - start-build
+    - -w
+    - -F
+    - $(params.buildConfig)
+    - --from-dir
+    - .
+    command:
+    - /usr/local/bin/oc
+    image: quay.io/openshift-pipeline/openshift-cli:latest
+    name: oc-binary-build
+    resources: {}
+    workingDir: /workspace/source/upload

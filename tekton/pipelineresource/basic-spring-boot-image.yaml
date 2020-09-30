@@ -1,0 +1,16 @@
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineResource
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"tekton.dev/v1alpha1","kind":"PipelineResource","metadata":{"annotations":{},"labels":{"template":"generic-java-jenkins-pipeline"},"name":"basic-spring-boot-image","namespace":"basic-spring-boot-cicd"},"spec":{"params":[{"name":"url","value":"image-registry.openshift-image-registry.svc:5000/basic-spring-boot-cicd/basic-spring-boot"}],"type":"image"}}
+  generation: 1
+  labels:
+    template: generic-java-jenkins-pipeline
+  name: basic-spring-boot-image
+  selfLink: /apis/tekton.dev/v1alpha1/namespaces/basic-spring-boot-cicd/pipelineresources/basic-spring-boot-image
+spec:
+  params:
+  - name: url
+    value: image-registry.openshift-image-registry.svc:5000/basic-spring-boot-cicd/basic-spring-boot
+  type: image

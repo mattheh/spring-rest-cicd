@@ -1,0 +1,140 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+labels:
+  template: generic-java-jenkins-pipeline
+metadata:
+  annotations:
+    description: Application template for JWS applications built using a Jenkins Pipeline
+    iconClass: icon-tomcat
+    tags: tomcat,tomcat8,java,jboss,xpaas,jenkins-ci
+    version: 1.2.0
+  name: generic-java-jenkins-pipeline
+objects:
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: ${SA_NAME}
+    namespace: ${NAMESPACE}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: ${SA_NAME}_edit
+    namespace: ${NAMESPACE}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: edit
+  subjects:
+  - kind: ServiceAccount
+    name: ${SA_NAME}
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    labels:
+      application: ${APPLICATION_NAME}-cicd
+    name: ${APPLICATION_NAME}-cicd-dev
+    namespace: ${NAMESPACE}
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    labels:
+      application: ${APPLICATION_NAME}-cicd
+    name: ${APPLICATION_NAME}-cicd-pre-ivt
+    namespace: ${NAMESPACE}
+- apiVersion: build.openshift.io/v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      application: ${APPLICATION_NAME}
+    name: ${APPLICATION_NAME}-cicd-dev
+    namespace: "${NAMESPACE}"
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: ${APPLICATION_NAME}-cicd-dev:devnew
+    source:
+      binary: {}
+      type: Binary
+    strategy:
+      sourceStrategy:
+        from:
+          kind: ImageStreamTag
+          name: ${IMAGE_STREAM_TAG_NAME}
+          namespace: ${IMAGE_STREAM_NAMESPACE}
+      type: Source
+- apiVersion: build.openshift.io/v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      application: ${APPLICATION_NAME}
+    name: ${APPLICATION_NAME}-cicd-pre-ivt
+    namespace: "${NAMESPACE}"
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: ${APPLICATION_NAME}-cicd-pre-ivt:ivtnew
+    source:
+      binary: {}
+      type: Binary
+    strategy:
+      sourceStrategy:
+        from:
+          kind: ImageStreamTag
+          name: ${IMAGE_STREAM_TAG_NAME}
+          namespace: ${IMAGE_STREAM_NAMESPACE}
+      type: Source
+parameters:
+- description: The name for the application.
+  name: APPLICATION_NAME
+  required: true
+  value: basic-spring
+- description: The namespace to deploy into
+  name: NAMESPACE
+  required: true
+- description: Git source URI for application
+  name: SOURCE_REPOSITORY_URL
+  required: true
+  value: https://github.com/redhat-cop/container-pipelines.git
+- description: Git branch/tag reference
+  name: SOURCE_REPOSITORY_REF
+  value: "master"
+- description: Path within Git project to build; empty for root project directory.
+  name: CONTEXT_DIR
+  value: basic-spring-boot
+- description: Source code repo for demo app
+  name: APPLICATION_SOURCE_REPO
+  required: true
+  value: https://github.com/mattheh/spring-rest.git
+- description: Source code branch for demo app
+  name: APPLICATION_SOURCE_REF
+  value: dev
+- description: Path within Git project pointing to the pipeline run script
+  name: PIPELINE_SCRIPT
+  value: Jenkinsfile
+- description: GitHub trigger secret
+  from: '[a-zA-Z0-9]{8}'
+  generate: expression
+  name: GITHUB_WEBHOOK_SECRET
+  required: true
+- description: Generic build trigger secret
+  from: '[a-zA-Z0-9]{8}'
+  generate: expression
+  name: GENERIC_WEBHOOK_SECRET
+  required: true
+- description: Namespace in which the ImageStreams for Red Hat Middleware images are
+    installed. These ImageStreams are normally installed in the openshift namespace.
+    You should only need to modify this if you've installed the ImageStreams in a
+    different namespace/project.
+  name: IMAGE_STREAM_NAMESPACE
+  required: true
+  value: openshift
+- description: Image stream tag for the image you'd like to use to build the application
+  name: IMAGE_STREAM_TAG_NAME
+  required: true
+  value: redhat-openjdk18-openshift:1.1
+- description: Name of a service account that can deploy to this project
+  name: SA_NAME
+  required: true
+  value: tekton

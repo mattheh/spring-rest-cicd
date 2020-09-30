@@ -1,0 +1,55 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"tekton.dev/v1beta1","kind":"Task","metadata":{"annotations":{},"labels":{"template":"generic-java-jenkins-pipeline"},"name":"deploy","namespace":"basic-spring-boot-cicd"},"spec":{"params":[{"description":"The namespace we are tagging from","name":"fromNamespace"},{"description":"The namespace we are tagging to","name":"toNamespace"},{"description":"The image tag","name":"tag"},{"description":"The imageStream we are tagging from","name":"fromImageStream"},{"description":"The imageStream we are tagging to","name":"toImageStream"},{"description":"the deployment resource, e.g deployment or deploymentconfig","name":"deploymentResource"},{"description":"the deployment name","name":"deployment"}],"steps":[{"args":["tag","$(params.fromNamespace)/$(params.fromImageStream):$(params.tag)","$(params.toNamespace)/$(params.toImageStream):$(params.tag)"],"command":["/usr/local/bin/oc"],"image":"quay.io/openshift-pipeline/openshift-cli:latest","name":"tag-image"},{"args":["rollout","status","$(params.deploymentResource)/$(params.deployment)","-n","$(params.toNamespace)"],"command":["oc"],"image":"quay.io/openshift-pipeline/openshift-cli:latest","name":"verify-deployment"}]}}
+  generation: 1
+  labels:
+    template: generic-java-jenkins-pipeline
+  name: deploy
+  selfLink: /apis/tekton.dev/v1beta1/namespaces/basic-spring-boot-cicd/tasks/deploy
+spec:
+  params:
+  - description: The namespace we are tagging from
+    name: fromNamespace
+    type: string
+  - description: The namespace we are tagging to
+    name: toNamespace
+    type: string
+  - description: The image tag
+    name: tag
+    type: string
+  - description: The imageStream we are tagging from
+    name: fromImageStream
+    type: string
+  - description: The imageStream we are tagging to
+    name: toImageStream
+    type: string
+  - description: the deployment resource, e.g deployment or deploymentconfig
+    name: deploymentResource
+    type: string
+  - description: the deployment name
+    name: deployment
+    type: string
+  steps:
+  - args:
+    - tag
+    - $(params.fromNamespace)/$(params.fromImageStream):$(params.tag)
+    - $(params.toNamespace)/$(params.toImageStream):$(params.tag)
+    command:
+    - /usr/local/bin/oc
+    image: quay.io/openshift-pipeline/openshift-cli:latest
+    name: tag-image
+    resources: {}
+  - args:
+    - rollout
+    - status
+    - $(params.deploymentResource)/$(params.deployment)
+    - -n
+    - $(params.toNamespace)
+    command:
+    - oc
+    image: quay.io/openshift-pipeline/openshift-cli:latest
+    name: verify-deployment
+    resources: {}

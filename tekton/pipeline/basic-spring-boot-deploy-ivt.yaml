@@ -1,0 +1,66 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"tekton.dev/v1beta1","kind":"Pipeline","metadata":{"annotations":{},"labels":{"template":"generic-java-jenkins-pipeline"},"name":"basic-spring-boot-deploy-ivt","namespace":"basic-spring-boot-cicd"},"spec":{"resources":[{"name":"basic-spring-boot-git-pre-ivt","type":"git"}],"tasks":[{"name":"helm-upgrade","params":[{"name":"helmRepo","value":"mhill.azurecr.io/helm"},{"name":"username","value":"mhill"},{"name":"password","value":"WUeQdKnivwFcGr8d3QqDrxevjvIX7IV+"},{"name":"chartName","value":"ocp-openjdk"},{"name":"releaseVersion","value":"v1"},{"name":"releaseName","value":"basic-spring-boot"},{"name":"releaseNamespace","value":"basic-spring-boot-ivt"},{"name":"overwriteValues","value":"nameOverride=basic-spring-boot-ivt,fullnameOverride=basic-spring-boot-ivt"},{"name":"helmVersion","value":"latest"},{"name":"env","value":"ivt"}],"resources":{"inputs":[{"name":"source","resource":"basic-spring-boot-git-pre-ivt"}]},"taskRef":{"name":"helm-upgrade-from-repo"}},{"name":"deploy-to-ivt","params":[{"name":"fromNamespace","value":"basic-spring-boot-pre-ivt"},{"name":"toNamespace","value":"basic-spring-boot-ivt"},{"name":"tag","value":"ivtnew"},{"name":"fromImageStream","value":"basic-spring-boot-pre-ivt"},{"name":"toImageStream","value":"basic-spring-boot-ivt"},{"name":"deploymentResource","value":"deploymentconfig"},{"name":"deployment","value":"basic-spring-boot-ivt"}],"runAfter":["helm-upgrade"],"taskRef":{"name":"deploy"}}]}}
+  generation: 1
+  labels:
+    template: generic-java-jenkins-pipeline
+  name: basic-spring-boot-deploy-ivt
+  selfLink: /apis/tekton.dev/v1beta1/namespaces/basic-spring-boot-cicd/pipelines/basic-spring-boot-deploy-ivt
+spec:
+  resources:
+  - name: basic-spring-boot-git-pre-ivt
+    type: git
+  tasks:
+  - name: helm-upgrade
+    params:
+    - name: helmRepo
+      value: mhill.azurecr.io/helm
+    - name: username
+      value: mhill
+    - name: password
+      value: WUeQdKnivwFcGr8d3QqDrxevjvIX7IV+
+    - name: chartName
+      value: ocp-openjdk
+    - name: releaseVersion
+      value: v1
+    - name: releaseName
+      value: basic-spring-boot
+    - name: releaseNamespace
+      value: basic-spring-boot-ivt
+    - name: overwriteValues
+      value: nameOverride=basic-spring-boot-ivt,fullnameOverride=basic-spring-boot-ivt
+    - name: helmVersion
+      value: latest
+    - name: env
+      value: ivt
+    resources:
+      inputs:
+      - name: source
+        resource: basic-spring-boot-git-pre-ivt
+    taskRef:
+      kind: Task
+      name: helm-upgrade-from-repo
+  - name: deploy-to-ivt
+    params:
+    - name: fromNamespace
+      value: basic-spring-boot-pre-ivt
+    - name: toNamespace
+      value: basic-spring-boot-ivt
+    - name: tag
+      value: ivtnew
+    - name: fromImageStream
+      value: basic-spring-boot-pre-ivt
+    - name: toImageStream
+      value: basic-spring-boot-ivt
+    - name: deploymentResource
+      value: deploymentconfig
+    - name: deployment
+      value: basic-spring-boot-ivt
+    runAfter:
+    - helm-upgrade
+    taskRef:
+      kind: Task
+      name: deploy
