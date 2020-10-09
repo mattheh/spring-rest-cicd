@@ -59,16 +59,16 @@ spec:
     taskRef:
       kind: Task
       name: helm-upgrade-from-repo
-  - name: deploy-to-dev
+  - name: deploy-to-pre-ivt
     params:
     - name: fromNamespace
-      value: basic-spring-boot-cicd
+      value: mhill.azurecr.io
     - name: toNamespace
       value: basic-spring-boot-pre-ivt
     - name: tag
       value: ivtnew
     - name: fromImageStream
-      value: basic-spring-boot-cicd-pre-ivt
+      value: basic-spring-boot-pre-ivt
     - name: toImageStream
       value: basic-spring-boot-pre-ivt
     - name: deploymentResource
