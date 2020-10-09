@@ -41,6 +41,7 @@ objects:
       application: ${APPLICATION_NAME}-cicd
     name: ${APPLICATION_NAME}-cicd-pre-ivt
     namespace: ${NAMESPACE}
+    dockerImageRepository: mhill.azurecr.io/${APPLICATION_NAME}-pre-ivt:ivtnew
 - apiVersion: build.openshift.io/v1
   kind: BuildConfig
   metadata:
@@ -73,8 +74,8 @@ objects:
   spec:
     output:
       to:
-        kind: ImageStreamTag
-        name: ${APPLICATION_NAME}-cicd-pre-ivt:ivtnew
+        kind: DockerImage
+        name: mhill.azurecr.io/${APPLICATION_NAME}-pre-ivt:ivtnew
     source:
       binary: {}
       type: Binary
