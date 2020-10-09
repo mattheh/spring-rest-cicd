@@ -41,6 +41,7 @@ objects:
       application: ${APPLICATION_NAME}-cicd
     name: ${APPLICATION_NAME}-cicd-pre-ivt
     namespace: ${NAMESPACE}
+    dockerImageRepository: mhill.azurecr.io/${APPLICATION_NAME}-pre-ivt:ivtnew
 - apiVersion: tekton.dev/v1alpha1
   kind: PipelineResource
   metadata:
@@ -393,20 +394,20 @@ objects:
         inputs:
         - name: source
           resource: ${APPLICATION_NAME}-git-pre-ivt    
-    - name: deploy-to-dev
+    - name: deploy-to-pre-ivt
       taskRef:
         name: deploy
       runAfter:
         - helm-upgrade
       params:
       - name: fromNamespace
-        value: ${APPLICATION_NAME}-cicd
+        value: mhill.azurecr.io
       - name: toNamespace
         value: ${APPLICATION_NAME}-pre-ivt  
       - name: tag
         value: ivtnew 
       - name: fromImageStream
-        value: ${APPLICATION_NAME}-cicd-pre-ivt
+        value: ${APPLICATION_NAME}-pre-ivt
       - name: toImageStream
         value: ${APPLICATION_NAME}-pre-ivt
       - name: deploymentResource
@@ -503,8 +504,8 @@ objects:
   spec:
     output:
       to:
-        kind: ImageStreamTag
-        name: ${APPLICATION_NAME}-cicd-pre-ivt:ivtnew
+        kind: DockerImage
+        name: mhill.azurecr.io/${APPLICATION_NAME}-pre-ivt:ivtnew
     source:
       binary: {}
       type: Binary
