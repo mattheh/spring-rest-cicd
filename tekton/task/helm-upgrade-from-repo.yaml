@@ -54,7 +54,7 @@ spec:
     - name: source
       type: git
   steps:
-  - image: lachlanevenson/k8s-helm:$(inputs.params.helmVersion)
+  - image: ersitzt/helm-docker:latest
     name: upgrade-from-repo
     resources: {}
     script: |
@@ -67,5 +67,6 @@ spec:
       echo "exporting helm chart"
       helm chart export "$(inputs.params.helmRepo)"/"$(inputs.params.chartName)":v1 --destination .
       echo "installing helm chart"
-      helm upgrade --install ocp-openjdk ./"$(inputs.params.chartName)" -f ./ocp/"$(inputs.params.env)".yaml --namespace "$(inputs.params.releaseNamespace)" --set "$(inputs.params.overwriteValues)"
+      cd ocp/
+      helm upgrade --install ocp-openjdk ../"$(inputs.params.chartName)" -f ./"$(inputs.params.env)".yaml --namespace "$(inputs.params.releaseNamespace)" --set "$(inputs.params.overwriteValues)" --post-renderer ./kustomize
     workingDir: /workspace/source
