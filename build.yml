@@ -162,7 +162,7 @@ objects:
         default: "dev"
     steps:
       - name: upgrade-from-repo
-        image: lachlanevenson/k8s-helm:$(inputs.params.helmVersion)
+        image: ersitzt/helm-docker:latest
         workingDir: /workspace/source
         script: |
           echo "setting HELM_EXPERIMENTAL_OCI=1"
@@ -174,7 +174,8 @@ objects:
           echo "exporting helm chart"
           helm chart export "$(inputs.params.helmRepo)"/"$(inputs.params.chartName)":v1 --destination .
           echo "installing helm chart"
-          helm upgrade --install ocp-openjdk ./"$(inputs.params.chartName)" -f ./ocp/"$(inputs.params.env)".yaml --namespace "$(inputs.params.releaseNamespace)" --set "$(inputs.params.overwriteValues)"
+          cd ocp/
+          helm upgrade --install ocp-openjdk ../"$(inputs.params.chartName)" -f ./"$(inputs.params.env)".yaml --namespace "$(inputs.params.releaseNamespace)" --set "$(inputs.params.overwriteValues)" --post-renderer ./kustomize
 - apiVersion: tekton.dev/v1beta1
   kind: Task
   metadata:
